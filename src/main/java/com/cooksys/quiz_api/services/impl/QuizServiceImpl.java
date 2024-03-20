@@ -1,5 +1,6 @@
 package com.cooksys.quiz_api.services.impl;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -58,7 +59,16 @@ public class QuizServiceImpl implements QuizService {
   @Override
   public QuestionResponseDto getRandomQuestion(Long id) {
     Quiz quiz = quizRepository.findById(id).orElseThrow();
-    List<QuestionResponseDto> questions = questionMapper.entitiesToDtos(quiz.getQuestions());
+    List<Question> undeletedQuestions = new ArrayList<>();
+
+    for (Question question : quiz.getQuestions()) {
+      if (!question.isDeleted()) {
+        undeletedQuestions.add(question);
+      }
+    }
+
+    List<QuestionResponseDto> questions = questionMapper.entitiesToDtos(undeletedQuestions);
+    
     return questions.get(new Random().nextInt(questions.size()));
   }
 

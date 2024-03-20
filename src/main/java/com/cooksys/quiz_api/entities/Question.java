@@ -23,6 +23,8 @@ public class Question {
 
   private String text;
 
+  private boolean deleted = false;
+
   @ManyToOne
   @JoinColumn(name = "quiz_id")
   private Quiz quiz;

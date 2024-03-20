@@ -1,5 +1,6 @@
 package com.cooksys.quiz_api.services.impl;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -31,7 +32,7 @@ public class QuizServiceImpl implements QuizService {
 
   @Override
   public List<QuizResponseDto> getAllQuizzes() {
-    return quizMapper.entitiesToDtos(quizRepository.findAll());
+    return quizMapper.entitiesToDtos(quizRepository.findByDeletedFalse());
   }
 
   @Override
@@ -44,7 +45,7 @@ public class QuizServiceImpl implements QuizService {
   @Override
   public QuizResponseDto deleteQuiz(Long id) {
     Quiz quiz = quizRepository.findById(id).orElseThrow();
-    deleteQuestions(quiz);
+    softDeleteQuiz(quiz);
     return quizMapper.entityToDto(quiz);
   }
 
@@ -58,7 +59,16 @@ public class QuizServiceImpl implements QuizService {
   @Override
   public QuestionResponseDto getRandomQuestion(Long id) {
     Quiz quiz = quizRepository.findById(id).orElseThrow();
-    List<QuestionResponseDto> questions = questionMapper.entitiesToDtos(quiz.getQuestions());
+    List<Question> undeletedQuestions = new ArrayList<>();
+
+    for (Question question : quiz.getQuestions()) {
+      if (!question.isDeleted()) {
+        undeletedQuestions.add(question);
+      }
+    }
+
+    List<QuestionResponseDto> questions = questionMapper.entitiesToDtos(undeletedQuestions);
+    
     return questions.get(new Random().nextInt(questions.size()));
   }
 
@@ -74,22 +84,34 @@ public class QuizServiceImpl implements QuizService {
   @Override
   public QuestionResponseDto deleteQuestion(Long id, Long questionID) {
     Question question = questionRepository.findById(questionID).orElseThrow();
-    deleteAnswers(question);
-    questionRepository.deleteById(questionID);
-
+    softDeleteQuestion(question);
     return questionMapper.entityToDto(question);
   }
 
-  private void deleteQuestions(Quiz quiz) {
+  private void softDeleteQuestion(Question question) {
+    question.setDeleted(true);
+    softDeleteAnswers(question);
+    questionRepository.save(question);
+  }
+
+  private void softDeleteQuiz(Quiz quiz) {
+    quiz.setDeleted(true);
+    softDeleteQuestions(quiz);
+    quizRepository.save(quiz);
+  }
+
+  private void softDeleteQuestions(Quiz quiz) {
     quiz.getQuestions().forEach(question -> {
-      deleteAnswers(question);
-      questionRepository.deleteById(question.getId());
+      question.setDeleted(true);
+      softDeleteAnswers(question);
+      questionRepository.save(question);
     });
   }
 
-  private void deleteAnswers(Question question) {
+  private void softDeleteAnswers(Question question) {
     question.getAnswers().forEach(answer -> {
-      answerRepository.deleteById(answer.getId());
+      answer.setDeleted(true);
+      answerRepository.save(answer);
     });
   }
 

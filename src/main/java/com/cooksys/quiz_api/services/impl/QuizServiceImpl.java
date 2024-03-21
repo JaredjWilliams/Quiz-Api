@@ -2,6 +2,7 @@ package com.cooksys.quiz_api.services.impl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 import com.cooksys.quiz_api.dtos.questions.QuestionRequestDto;
@@ -10,6 +11,8 @@ import com.cooksys.quiz_api.dtos.quizzes.QuizRequestDto;
 import com.cooksys.quiz_api.dtos.quizzes.QuizResponseDto;
 import com.cooksys.quiz_api.entities.Question;
 import com.cooksys.quiz_api.entities.Quiz;
+import com.cooksys.quiz_api.exceptions.BadRequestException;
+import com.cooksys.quiz_api.exceptions.NotFoundException;
 import com.cooksys.quiz_api.mappers.QuestionMapper;
 import com.cooksys.quiz_api.mappers.QuizMapper;
 import com.cooksys.quiz_api.repositories.AnswerRepository;
@@ -35,65 +38,77 @@ public class QuizServiceImpl implements QuizService {
   private final QuestionMapper questionMapper;
 
   @Override
-  public ResponseEntity<List<QuizResponseDto>> getAllQuizzes() {
+  public List<QuizResponseDto> getAllQuizzes() {
 
     if (quizRepository.findByDeletedFalse().isEmpty()) {
-      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+      throw new NotFoundException("No quizzes found");
     }
 
-    return new ResponseEntity<>(quizMapper.entitiesToDtos(quizRepository.findByDeletedFalse()), HttpStatus.OK);
+    return quizMapper.entitiesToDtos(quizRepository.findByDeletedFalse());
   }
 
   @Override
-  public ResponseEntity<QuizResponseDto> postQuiz(QuizRequestDto quizRequestDto) {
+  public QuizResponseDto postQuiz(QuizRequestDto quizRequestDto) {
 
-    if (quizRequestDto.getName() == null) {
-      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    if (quizRequestDto.getName().isEmpty()) {
+      throw new BadRequestException("Name field cannot be empty");
     }
 
     Quiz savedQuiz = quizRepository.save(quizMapper.dtoToEntity(quizRequestDto));
     saveQuestions(savedQuiz);
 
-    return new ResponseEntity<>(quizMapper.entityToDto(quizRepository.getById(savedQuiz.getId())), HttpStatus.CREATED) ;
+    return quizMapper.entityToDto(quizRepository.getById(savedQuiz.getId()));
   }
 
   @Override
-  public ResponseEntity<QuizResponseDto> deleteQuiz(Long id) {
+  public QuizResponseDto deleteQuiz(Long id) {
 
-    Quiz quiz = quizRepository.findById(id).orElseThrow();
+    Optional<Quiz> quiz = quizRepository.findById(id);
 
-    if (quiz.isDeleted()) {
-      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    if (quiz.isEmpty()) {
+      throw new NotFoundException("Quiz not found for id: " + id);
     }
 
-    softDeleteQuiz(quiz);
+    Quiz foundQuiz = quiz.get();
 
-    return new ResponseEntity<>(quizMapper.entityToDto(quiz), HttpStatus.NO_CONTENT) ;
+    if (foundQuiz.isDeleted()) {
+      throw new NotFoundException("Quiz has been deleted for id: " + id);
+    }
+
+    softDeleteQuiz(foundQuiz);
+
+    return quizMapper.entityToDto(foundQuiz);
   }
 
   @Override
-  public ResponseEntity<QuizResponseDto> patchQuiz(Long id, String name) {
-    Quiz quiz = quizRepository.findById(id).orElseThrow();
+  public QuizResponseDto patchQuiz(Long id, String name) {
+    Optional<Quiz> quiz = quizRepository.findById(id);
 
-    if (quiz.isDeleted()) {
-      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    if (quiz.isEmpty()) {
+      throw new NotFoundException("Quiz not found for id: " + id);
     }
 
-    if (name.isEmpty()) {
-      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    Quiz foundQuiz = quiz.get();
+
+    if (foundQuiz.isDeleted()) {
+      throw new NotFoundException("Quiz has been deleted for id: " + id);
     }
 
-    quiz.setName(name);
+    if (name.isBlank()) {
+      throw new BadRequestException("Name cannot only contain black spaces.");
+    }
 
-    return new ResponseEntity<>(quizMapper.entityToDto(quizRepository.save(quiz)), HttpStatus.OK) ;
+    foundQuiz.setName(name);
+
+    return quizMapper.entityToDto(quizRepository.save(foundQuiz));
   }
 
   @Override
-  public ResponseEntity<QuestionResponseDto> getRandomQuestion(Long id) {
+  public QuestionResponseDto getRandomQuestion(Long id) {
     Quiz quiz = quizRepository.findById(id).orElseThrow();
 
     if (quiz.isDeleted()) {
-      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+      throw new NotFoundException("Quiz has been deleted for id: " + id);
     }
 
     List<Question> undeletedQuestions = new ArrayList<>();
@@ -106,31 +121,52 @@ public class QuizServiceImpl implements QuizService {
 
     List<QuestionResponseDto> questions = questionMapper.entitiesToDtos(undeletedQuestions);
     
-    return new ResponseEntity<>(questions.get(new Random().nextInt(questions.size())), HttpStatus.OK) ;
+    return questions.get(new Random().nextInt(questions.size()));
   }
 
   @Override
-  public ResponseEntity<QuizResponseDto> addQuestion(Long id, QuestionRequestDto question) {
+  public QuizResponseDto addQuestion(Long id, QuestionRequestDto question) {
     Question questionEntity = questionMapper.dtoToEntity(question);
-    Quiz quiz = quizRepository.findById(id).orElseThrow();
+    Optional<Quiz> quiz = quizRepository.findById(id);
 
-    if (quiz.isDeleted()) {
-      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    if (questionEntity.getText().isBlank()) {
+      throw new BadRequestException("Question text cannot be empty");
     }
 
-    questionEntity.setQuiz(quiz);
+    if (quiz.isEmpty()) {
+      throw new NotFoundException("Quiz not found");
+    }
+
+    Quiz foundQuiz = quiz.get();
+
+    if (foundQuiz.isDeleted()) {
+      throw new NotFoundException("Quiz has been deleted");
+    }
+
+    questionEntity.setQuiz(foundQuiz);
     questionRepository.save(questionEntity);
     saveAnswers(questionEntity);
 
-    return new ResponseEntity<>(quizMapper.entityToDto(quizRepository.save(quiz)), HttpStatus.CREATED) ;
+    return quizMapper.entityToDto(quizRepository.save(foundQuiz));
   }
 
   @Override
-  public ResponseEntity<QuestionResponseDto> deleteQuestion(Long id, Long questionID) {
-    Question question = questionRepository.findById(questionID).orElseThrow();
-    softDeleteQuestion(question);
+  public QuestionResponseDto deleteQuestion(Long id, Long questionID) {
+    Optional<Question> question = questionRepository.findById(questionID);
 
-    return new ResponseEntity<>(questionMapper.entityToDto(question), HttpStatus.NO_CONTENT) ;
+    if (question.isEmpty()) {
+      throw new NotFoundException("Question not found");
+    }
+
+    Question foundQuestion = question.get();
+
+    if (foundQuestion.isDeleted()) {
+      throw new NotFoundException("Question has been deleted for id: " + questionID);
+    }
+
+    softDeleteQuestion(foundQuestion);
+
+    return questionMapper.entityToDto(foundQuestion);
   }
 
   private void softDeleteQuestion(Question question) {
@@ -158,6 +194,14 @@ public class QuizServiceImpl implements QuizService {
       answer.setDeleted(true);
       answerRepository.save(answer);
     });
+  }
+
+  private void softDelete(Object obj) {
+    if (obj instanceof Quiz) {
+      softDeleteQuiz((Quiz) obj);
+    } else if (obj instanceof Question) {
+      softDeleteQuestion((Question) obj);
+    }
   }
 
   private void saveQuestions(Quiz quiz) {

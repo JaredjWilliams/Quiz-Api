@@ -23,37 +23,37 @@ public class QuizController {
   private final QuizService quizService;
 
   @GetMapping
-  public ResponseEntity<List<QuizResponseDto>> getAllQuizzes() {
+  public List<QuizResponseDto> getAllQuizzes() {
     return quizService.getAllQuizzes();
   }
 
   @PostMapping
-  public ResponseEntity<QuizResponseDto> postQuiz(@RequestBody QuizRequestDto quizRequestDto) {
+  public QuizResponseDto postQuiz(@RequestBody QuizRequestDto quizRequestDto) {
     return quizService.postQuiz(quizRequestDto);
   }
 
   @DeleteMapping("/{id}")
-  public ResponseEntity<QuizResponseDto> deleteQuiz(@PathVariable Long id) {
+  public QuizResponseDto deleteQuiz(@PathVariable Long id) {
     return quizService.deleteQuiz(id);
   }
 
   @PatchMapping("/{id}/rename/{newName}")
-    public ResponseEntity<QuizResponseDto> patchQuiz(@PathVariable Long id, @PathVariable String newName) {
+    public QuizResponseDto patchQuiz(@PathVariable Long id, @PathVariable String newName) {
         return quizService.patchQuiz(id, newName);
     }
 
   @GetMapping("/{id}/random")
-    public ResponseEntity<QuestionResponseDto> getRandomQuestion(@PathVariable Long id) {
+    public QuestionResponseDto getRandomQuestion(@PathVariable Long id) {
         return quizService.getRandomQuestion(id);
     }
 
     @PatchMapping("/{id}/add")
-    public ResponseEntity<QuizResponseDto> addQuestion(@PathVariable Long id, @RequestBody QuestionRequestDto question) {
+    public QuizResponseDto addQuestion(@PathVariable Long id, @RequestBody QuestionRequestDto question) {
         return quizService.addQuestion(id, question);
     }
 
     @DeleteMapping("/{id}/delete/{questionId}")
-    public ResponseEntity<QuestionResponseDto> deleteQuestion(@PathVariable Long id, @PathVariable Long questionId) {
+    public QuestionResponseDto deleteQuestion(@PathVariable Long id, @PathVariable Long questionId) {
         return quizService.deleteQuestion(id, questionId);
     }
 

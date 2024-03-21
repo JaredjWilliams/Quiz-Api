@@ -196,14 +196,6 @@ public class QuizServiceImpl implements QuizService {
     });
   }
 
-  private void softDelete(Object obj) {
-    if (obj instanceof Quiz) {
-      softDeleteQuiz((Quiz) obj);
-    } else if (obj instanceof Question) {
-      softDeleteQuestion((Question) obj);
-    }
-  }
-
   private void saveQuestions(Quiz quiz) {
     quiz.getQuestions().forEach(question -> {
       question.setQuiz(quiz);

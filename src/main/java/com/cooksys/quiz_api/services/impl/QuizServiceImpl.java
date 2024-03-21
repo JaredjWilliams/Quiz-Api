@@ -17,6 +17,8 @@ import com.cooksys.quiz_api.repositories.QuestionRepository;
 import com.cooksys.quiz_api.repositories.QuizRepository;
 import com.cooksys.quiz_api.services.QuizService;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
@@ -33,34 +35,67 @@ public class QuizServiceImpl implements QuizService {
   private final QuestionMapper questionMapper;
 
   @Override
-  public List<QuizResponseDto> getAllQuizzes() {
-    return quizMapper.entitiesToDtos(quizRepository.findByDeletedFalse());
+  public ResponseEntity<List<QuizResponseDto>> getAllQuizzes() {
+
+    if (quizRepository.findByDeletedFalse().isEmpty()) {
+      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+
+    return new ResponseEntity<>(quizMapper.entitiesToDtos(quizRepository.findByDeletedFalse()), HttpStatus.OK);
   }
 
   @Override
-  public QuizResponseDto postQuiz(QuizRequestDto quizRequestDto) {
+  public ResponseEntity<QuizResponseDto> postQuiz(QuizRequestDto quizRequestDto) {
+
+    if (quizRequestDto.getName() == null) {
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+
     Quiz savedQuiz = quizRepository.save(quizMapper.dtoToEntity(quizRequestDto));
     saveQuestions(savedQuiz);
-    return quizMapper.entityToDto(quizRepository.getById(savedQuiz.getId()));
+
+    return new ResponseEntity<>(quizMapper.entityToDto(quizRepository.getById(savedQuiz.getId())), HttpStatus.CREATED) ;
   }
 
   @Override
-  public QuizResponseDto deleteQuiz(Long id) {
+  public ResponseEntity<QuizResponseDto> deleteQuiz(Long id) {
+
     Quiz quiz = quizRepository.findById(id).orElseThrow();
+
+    if (quiz.isDeleted()) {
+      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+
     softDeleteQuiz(quiz);
-    return quizMapper.entityToDto(quiz);
+
+    return new ResponseEntity<>(quizMapper.entityToDto(quiz), HttpStatus.NO_CONTENT) ;
   }
 
   @Override
-  public QuizResponseDto patchQuiz(Long id, String name) {
+  public ResponseEntity<QuizResponseDto> patchQuiz(Long id, String name) {
     Quiz quiz = quizRepository.findById(id).orElseThrow();
+
+    if (quiz.isDeleted()) {
+      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+
+    if (name.isEmpty()) {
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+
     quiz.setName(name);
-    return quizMapper.entityToDto(quizRepository.save(quiz));
+
+    return new ResponseEntity<>(quizMapper.entityToDto(quizRepository.save(quiz)), HttpStatus.OK) ;
   }
 
   @Override
-  public QuestionResponseDto getRandomQuestion(Long id) {
+  public ResponseEntity<QuestionResponseDto> getRandomQuestion(Long id) {
     Quiz quiz = quizRepository.findById(id).orElseThrow();
+
+    if (quiz.isDeleted()) {
+      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+
     List<Question> undeletedQuestions = new ArrayList<>();
 
     for (Question question : quiz.getQuestions()) {
@@ -71,25 +106,31 @@ public class QuizServiceImpl implements QuizService {
 
     List<QuestionResponseDto> questions = questionMapper.entitiesToDtos(undeletedQuestions);
     
-    return questions.get(new Random().nextInt(questions.size()));
+    return new ResponseEntity<>(questions.get(new Random().nextInt(questions.size())), HttpStatus.OK) ;
   }
 
   @Override
-  public QuizResponseDto addQuestion(Long id, QuestionRequestDto question) {
+  public ResponseEntity<QuizResponseDto> addQuestion(Long id, QuestionRequestDto question) {
     Question questionEntity = questionMapper.dtoToEntity(question);
     Quiz quiz = quizRepository.findById(id).orElseThrow();
-    // Need to check if quiz is deleted before adding. Next commit.
+
+    if (quiz.isDeleted()) {
+      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+
     questionEntity.setQuiz(quiz);
     questionRepository.save(questionEntity);
     saveAnswers(questionEntity);
-    return quizMapper.entityToDto(quizRepository.save(quiz));
+
+    return new ResponseEntity<>(quizMapper.entityToDto(quizRepository.save(quiz)), HttpStatus.CREATED) ;
   }
 
   @Override
-  public QuestionResponseDto deleteQuestion(Long id, Long questionID) {
+  public ResponseEntity<QuestionResponseDto> deleteQuestion(Long id, Long questionID) {
     Question question = questionRepository.findById(questionID).orElseThrow();
     softDeleteQuestion(question);
-    return questionMapper.entityToDto(question);
+
+    return new ResponseEntity<>(questionMapper.entityToDto(question), HttpStatus.NO_CONTENT) ;
   }
 
   private void softDeleteQuestion(Question question) {

@@ -2,8 +2,10 @@ package com.cooksys.quiz_api.controllers;
 
 import java.util.List;
 
-import com.cooksys.quiz_api.dtos.QuestionResponseDto;
-import com.cooksys.quiz_api.dtos.QuizResponseDto;
+import com.cooksys.quiz_api.dtos.questions.QuestionRequestDto;
+import com.cooksys.quiz_api.dtos.questions.QuestionResponseDto;
+import com.cooksys.quiz_api.dtos.quizzes.QuizRequestDto;
+import com.cooksys.quiz_api.dtos.quizzes.QuizResponseDto;
 import com.cooksys.quiz_api.entities.Question;
 import com.cooksys.quiz_api.entities.Quiz;
 import com.cooksys.quiz_api.services.QuizService;
@@ -25,8 +27,8 @@ public class QuizController {
   }
 
   @PostMapping
-  public QuizResponseDto postQuiz(@RequestBody Quiz quiz) {
-    return quizService.postQuiz(quiz);
+  public QuizResponseDto postQuiz(@RequestBody QuizRequestDto quizRequestDto) {
+    return quizService.postQuiz(quizRequestDto);
   }
 
   @DeleteMapping("/{id}")
@@ -45,7 +47,7 @@ public class QuizController {
     }
 
     @PatchMapping("/{id}/add")
-    public QuizResponseDto addQuestion(@PathVariable Long id, @RequestBody Question question) {
+    public QuizResponseDto addQuestion(@PathVariable Long id, @RequestBody QuestionRequestDto question) {
         return quizService.addQuestion(id, question);
     }
 

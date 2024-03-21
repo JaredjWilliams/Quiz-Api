@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import com.cooksys.quiz_api.dtos.QuestionResponseDto;
-import com.cooksys.quiz_api.dtos.QuizResponseDto;
+import com.cooksys.quiz_api.dtos.questions.QuestionRequestDto;
+import com.cooksys.quiz_api.dtos.questions.QuestionResponseDto;
+import com.cooksys.quiz_api.dtos.quizzes.QuizRequestDto;
+import com.cooksys.quiz_api.dtos.quizzes.QuizResponseDto;
 import com.cooksys.quiz_api.entities.Question;
 import com.cooksys.quiz_api.entities.Quiz;
 import com.cooksys.quiz_api.mappers.QuestionMapper;
@@ -36,8 +38,8 @@ public class QuizServiceImpl implements QuizService {
   }
 
   @Override
-  public QuizResponseDto postQuiz(Quiz quiz) {
-    Quiz savedQuiz = quizRepository.save(quiz);
+  public QuizResponseDto postQuiz(QuizRequestDto quizRequestDto) {
+    Quiz savedQuiz = quizRepository.save(quizMapper.dtoToEntity(quizRequestDto));
     saveQuestions(savedQuiz);
     return quizMapper.entityToDto(quizRepository.getById(savedQuiz.getId()));
   }
@@ -73,11 +75,12 @@ public class QuizServiceImpl implements QuizService {
   }
 
   @Override
-  public QuizResponseDto addQuestion(Long id, Question question) {
+  public QuizResponseDto addQuestion(Long id, QuestionRequestDto question) {
+    Question questionEntity = questionMapper.dtoToEntity(question);
     Quiz quiz = quizRepository.findById(id).orElseThrow();
-    question.setQuiz(quiz);
-    questionRepository.save(question);
-    saveAnswers(question);
+    questionEntity.setQuiz(quiz);
+    questionRepository.save(questionEntity);
+    saveAnswers(questionEntity);
     return quizMapper.entityToDto(quizRepository.save(quiz));
   }
 

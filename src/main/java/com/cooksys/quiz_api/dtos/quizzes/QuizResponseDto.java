@@ -1,7 +1,8 @@
-package com.cooksys.quiz_api.dtos;
+package com.cooksys.quiz_api.dtos.quizzes;
 
 import java.util.List;
 
+import com.cooksys.quiz_api.dtos.questions.QuestionResponseDto;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 

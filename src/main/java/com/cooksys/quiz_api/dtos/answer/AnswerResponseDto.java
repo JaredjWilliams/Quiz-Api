@@ -1,4 +1,4 @@
-package com.cooksys.quiz_api.dtos;
+package com.cooksys.quiz_api.dtos.answer;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

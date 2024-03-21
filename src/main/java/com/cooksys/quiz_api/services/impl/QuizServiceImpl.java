@@ -78,6 +78,7 @@ public class QuizServiceImpl implements QuizService {
   public QuizResponseDto addQuestion(Long id, QuestionRequestDto question) {
     Question questionEntity = questionMapper.dtoToEntity(question);
     Quiz quiz = quizRepository.findById(id).orElseThrow();
+    // Need to check if quiz is deleted before adding. Next commit.
     questionEntity.setQuiz(quiz);
     questionRepository.save(questionEntity);
     saveAnswers(questionEntity);
